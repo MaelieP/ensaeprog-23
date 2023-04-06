@@ -105,5 +105,19 @@ print("Le temps mis pour parcourir tous les trajets du graph 10 est ", temps_cal
 #print(prog_dyn("input/network.2.in", "input/routes.2.2.out", "input/trucks.1.in"))
 #pas optimal
 #print(enleve_camion_inutile("input/trucks.2.in"))
-print(algo_naif("input/network.00.in", "input/routes.00.2.out", "input/trucks.0.in"))
+
+"""ici on teste l'algorithme naif sur un petit graphe qu'on a cree, on voit que c'est beaucoup trop long"""
+
+#print(algo_naif("input/network.00.in", "input/routes.00.2.out", "input/trucks.0.in"))
 #print(convert_to_list("input/routes.5.2.out", False))
+
+
+
+#enleve_camion_inutile("input/trucks.2.in")
+
+
+##resultat pour l'algorithme glouton
+for i in range(1,11) :
+    for j in [0,1] :
+                print(glouton("input/routes."+str(i)+".2.out", "input/trucks."+str(j)+".in"))    
+    print(glouton("input/routes."+str(i)+".2.out", "input/trucks.22.out"))

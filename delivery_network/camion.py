@@ -9,52 +9,40 @@ def prog_dyn(graphe, routes, camions) :
     """
   
     #commencer par calculer les utilités
-    g=graph_from_file(graphe)
-    route=open(routes)    
-    cam=open(camions)
-    line_c=cam.readline().split()
-    line_r=route.readline().split()
+    route=convert_to_list(routes, True)
+       
+    cam=convert_to_list(camions, False)
+    
     W=25*10**9 #contrainte budegétaire    
-    nb_c=int(line_c[0])
-    nb_r=int(line_r[0])
-    trajet=[0 for i in range (nb_r)] #on enregistre si le trajet est fait ou non (on doit l'utiliser au plus une fois)
+    nb_c=len(cam)
+    nb_r=len(route)
+    trajet=[0 for i in range (nb_r)] #on enregistre si le trajet est fait ou non (on doit le parcourir au plus une fois)
     x=[0 for i in range(nb_c)] #indique le nb de fois qu'on prend un camion
     power=[0 for i in range(nb_c)] #puissance associée au camion
     #on lit les fichiers
-   
+    cam.sort(key=lambda x: x[1], reverse=True) #on trie les camions par prix décroissants
     w=[0 for i in range(nb_c)]#cout 
-    utilite=[0 for i in range(nb_c)]#utilie
-    route.close()
+    utilite=[0 for i in range(nb_c)]#utilite  
     
-    #on met à jours les trucs t n calcule l'utilité du camion i
-    #pour ca on parcourt le fichier trajet, on note les trajets possibles et on somme les utilite
-    for i in range(nb_c) :
-        
-        line=cam.readline().split()
+    # on calcule l'utilité du camion i
+    #pour ça, on parcourt les camions, on note les trajets que peut faire chaque camion et on somme les utilite
+    for i in range(nb_c) :                
         u=0.0
-        w[i]=int(line[1])
-        power[i]=int(line[0])
+        w[i]=int(cam[i][1])
+        power[i]=int(cam[i][0])
          #indique le trajet
-        cpt=0 #compte le nb de trajet d'un camion
-       
-        for j in range(nb_r) :
-            route=open(routes)
-            route.readline()
-            line2=route.readline().split()
+        cpt=0 #compte le nb de trajet d'un camion       
+        for j in range(nb_r) :          
             
-            if trajet[j]!=1 and  int(line2[0])<=power[i] :
-                u+=float(line2[1])
+            if trajet[j]!=1 and  int(route[j][0])<=power[i] :
+                u+=float(route[j][1])
                 trajet[j]=1
                 cpt+=1
-            route.close()    
+                
         utilite[i]=(u,i, cpt)
     print(utilite)
         
-    #on definit l'efficacite
-    efficacite=[]
-    """for j in range(len(utilite)) :
-        efficacite.append((utilite[j][0]/w[j], utilite[j][1], utilite[j][2]))
-    """
+   
     utilite.sort(key = lambda x :x[0], reverse=True) #on trie le tableau selon l'utilite
     w_conso=0 #inférieur a la CB?
     
@@ -69,7 +57,7 @@ def prog_dyn(graphe, routes, camions) :
         else :
             x[k]=0
     
-    cam.close()
+   
     return x
     
 
@@ -82,6 +70,9 @@ def enleve_camion_inutile(liste_camion ) :
     """
     camion=convert_to_list(liste_camion, True)
     camion_utile=[]
+    fichier=open("input/trucks.22.out","x")
+    fichier.write('185') #on a lance le programme une première fois pour avoir que pour le fichier trucks 2 il y avait 185 camions
+    #on se servira uniquement de cette fonction pour trucks.2
     for element in camion :
         bool=False
         (p, c)= element
@@ -91,7 +82,10 @@ def enleve_camion_inutile(liste_camion ) :
                 bool=True
         if not bool :
             camion_utile.append(element)
-    return camion_utile
+            fichier.write("\n"+ str(p)+" "+str(c))
+            
+    fichier.close()
+    
     #Complexité : O(nb_c**2) avec nb_c le nombre de camions
 
 
@@ -124,7 +118,7 @@ def convert_to_list(fichier, bool) :
 
 
 #deuxième idée,        
-def glouton(graphe, trajet, camion):
+def glouton( trajet, camion):
     """
     Idée : on trie les trajets en fonction de leur utilité. On trie les camions en fonction de leur poids. 
     Tant que la contrainte budgétaire n'est pas dépassée, on continue de rajouter 
@@ -153,16 +147,19 @@ def glouton(graphe, trajet, camion):
     
     for element in trajet : #on parcourt tous les trajets
         (power, cout)=element
-        #on cherche le camion dont le prix est le moins cher
-
-        for cam in camion : #on parcourt tous les camions
-            (a,b,i)=cam
+        #on cherche le camion dont le prix est le moins cher et qui peut parcourir le trajet element, on l'affecte alors à ce trajet
+        l=0
+        bool=False
+        while l<len(camion) and not bool: #on parcourt tous les camions, on s'arrete des qu'on trouve un camion qui convient
+            (a,b,num)=camion[l]
             if prix_total +b>W : #on regarde si le prix total + le nv prix depasse la cb
                 break
             if  a > power : 
-                camions[j]= i #pour le trajet j on prend le camion i
-                prix_total+=b
-            print(prix_total) #on augement le prix paye
+                camions[j]= l #pour le trajet j on prend le camion i
+                prix_total+=b#on augement le prix paye
+                bool=True
+            l+=1
+             
         j+=1 #on change de trajet
     
     counts=[]
@@ -171,12 +168,14 @@ def glouton(graphe, trajet, camion):
         c=camions.count(k)
         if c!=0 :
             counts.append((k,c))
-    return counts
+    return counts,  W-prix_total #on renvoie la collection , les affectations et l'argent qu'il reste
+
+
 import itertools
 
 
 
-def algo_naif(graphe, trajet, camions1) :
+def algo_naif(trajet, camions1) :
     """on teste toutes les possibilités, on est sur d'avoir la possibilité optimale
     mais le complexité va être très grande (on teste 2**n possibilités avec n=len(trajet))
      Paramètres :
@@ -193,30 +192,38 @@ def algo_naif(graphe, trajet, camions1) :
     best_att = []
     for j in range(0, len(trajet)+1) :
         for i in itertools.combinations(trajet , j ):
-            print(i) #en gros on a 2**n choix car pour chaque trajet, on peut choisir de le prendre ou pas 
+         #en gros on a 2**n choix car pour chaque trajet, on peut choisir de le prendre ou pas 
     #du coup, on regarde le camion le plus intéressant à prendre pour chaque trajet comme on a fait avant
     #on va donc chercher la meilleure utilité dans les 2**n cas
-            camions=[-1 for _ in range(len(trajet))]
+            camions=[]
             prix_total=0
             utilite=0
             for element in i :
+                bool=False
                 for cam in camion : #on parcourt tous les camions
                     (a,b,j)=cam
-                    if prix_total +b>W : #on regarde si le prix total + le nv prix depasse la cb
+                    if bool or prix_total +b>W : #on regarde si le prix total + le nv prix depasse la cb
                         break
+                
                     if  a > element[0] : 
-                        camions[element[2]]= j #pour le trajet element[2] on prend le camion j
+                        camions.append((j,element[2])) #pour le trajet element[2] on prend le camion j
                         prix_total+=b
+                        bool=True
                 utilite+=element[1]     
             if utilite > best_utilite :
                 best_utilite=utilite  
-                best_att=i
+                best_att=camions
     return best_att, best_utilite , W-prix_total               
 
+   #on ne peut pas tester sur les plus gros graphes car la complexité en 2**n est beaucoup trop grande! Mais étant donné qu'on a testé toutes
+   # les possibilités, on a forcément la bonne.     
         
-        
-        
-        
+#avec efficacité
+
+
+
+
+
         
         
         
